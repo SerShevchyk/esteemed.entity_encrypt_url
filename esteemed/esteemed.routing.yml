@@ -1,0 +1,7 @@
+esteemed.entity_encrypt_url:
+  path: 'entity-encrypt-url/{encrypt}'
+  defaults:
+    _controller: '\Drupal\esteemed\Controller\EntityEncryptUrlController::build'
+    _title: 'build'
+  requirements:
+    _permission: 'access content'

@@ -1,0 +1,72 @@
+<?php
+
+use Drupal\Core\Entity\EntityInterface;
+use Drupal\Core\Link;
+use Drupal\Core\Url;
+use Drupal\encrypt\Entity\EncryptionProfile;
+
+/**
+ * @file
+ * Contains esteemed.module.
+ *
+ * @param \Drupal\Core\Entity\EntityInterface $entity
+ */
+
+/*
+ * Implements hook_ENTITY_TYPE_insert().
+ */
+function esteemed_node_insert(EntityInterface $entity) {
+  if ("article" == $entity->bundle() && $encryption_profile = EncryptionProfile::load("default")) {
+    $aliasArray = \Drupal::service('path.alias_storage')
+      ->load(['source' => '/node/' . $entity->id()]);
+
+    if (empty($aliasArray)) {
+      $path = "/node/" . $entity->id();
+    }
+    else {
+      $path = $aliasArray["alias"];
+    }
+
+    $encryptedString = \Drupal::service('encryption')->encrypt($path, $encryption_profile);
+
+    $url = Url::fromUserInput("/entity-encrypt-url/$encryptedString", ["absolute"   => TRUE, 'attributes' => ['target' => '_blank'],
+    ]);
+    $link = Link::fromTextAndUrl("Link to your article", $url)->toString();
+
+    $mailManager = \Drupal::service('plugin.manager.mail');
+    $key = 'create_article';
+    $to = $entity->getOwner()->getEmail();
+    $params['message'] = $link;
+    $params['title'] = $entity->label();
+    $langcode = \Drupal::currentUser()->getPreferredLangcode();
+
+    $result = $mailManager->mail("esteemed", $key, $to, $langcode, $params, NULL, TRUE);
+    if ($result['result'] !== TRUE) {
+      drupal_set_message(t('There was a problem sending your message and it was not sent.'), 'error');
+    }
+    else {
+      drupal_set_message(t('Your message has been sent.'));
+    }
+  }
+}
+
+/**
+ * Implements hook_mail().
+ *
+ * @param $key
+ * @param $message
+ * @param $params
+ */
+function esteemed_mail($key, &$message, $params) {
+  $options = [
+    'langcode' => $message['langcode'],
+  ];
+
+  switch ($key) {
+    case 'create_article':
+      $message['from'] = \Drupal::config('system.site')->get('mail');
+      $message['subject'] = t('Article created: @title', ['@title' => $params['title']], $options);
+      $message['body'][] = $params['message'];
+      break;
+  }
+}

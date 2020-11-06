@@ -1,0 +1,8 @@
+name: 'Esteemed'
+type: module
+description: 'Provide custom functionality for Esteemed project'
+core: 8.x
+package: 'Custom'
+dependencies:
+  - encrypt:encrypt
+  - real_aes:real_aes
